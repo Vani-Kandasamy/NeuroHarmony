@@ -5,6 +5,7 @@ from caregiver import caregiver_dashboard as ml_caregiver_dashboard
 import os
 from db import DDB
 
+# Configure Streamlit page
 st.set_page_config(
     page_title="NeuroTunes",
     page_icon="🎵",
@@ -14,6 +15,7 @@ st.set_page_config(
 
 IMAGE_ADDRESS = "https://www.denvercenter.org/wp-content/uploads/2024/10/music-therapy.jpg"
 
+# Caregiver emails (simple list)
 CAREGIVER_EMAILS = [
     "vani.kandasamy@pyxeda.ai"
 ]
@@ -22,10 +24,10 @@ def is_caregiver(email: str) -> bool:
     return email.lower() in [e.lower() for e in CAREGIVER_EMAILS]
 
 def get_user_simple() -> Optional[Dict[str, Any]]:
-    
+    """Get user via Streamlit experimental auth if available; otherwise use a simple sidebar login form."""
     exp_user = getattr(st, "experimental_user", None)
     has_login = hasattr(st, "login") and hasattr(st, "logout")
-   
+    # Preferred path: experimental auth available
     if exp_user is not None and hasattr(exp_user, "is_logged_in") and has_login:
         with st.sidebar:
             if not exp_user.is_logged_in:
@@ -41,10 +43,13 @@ def get_user_simple() -> Optional[Dict[str, Any]]:
         st.markdown(f"Hello, <span style='color: orange; font-weight: bold;'>{name}</span>!", unsafe_allow_html=True)
         return {"name": name, "email": email}
     
+    # No fallback: require Streamlit experimental auth
     return None
 
+
+
 def main():
-    
+    """Main application logic (simple auth + role routing)."""
     # Title and image
     st.title("NeuroTunes")
     st.image(IMAGE_ADDRESS, caption="EEG Frequency Bands (Delta, Theta, Alpha, Beta, Gamma)")
@@ -63,6 +68,7 @@ def main():
         ddb = DDB()
         ok_user = ddb.upsert_user(email, name)
         ok_log = ddb.log_event(email, 'login', {})
+
     # One-time automatic seeding: if songs dataset is empty, seed defaults
     if not st.session_state.get("_seed_done"):
         try:
@@ -74,6 +80,7 @@ def main():
             pass
         finally:
             st.session_state["_seed_done"] = True
+
     # Route by role based on email
     user_email = (user.get("email") or "").strip()
     if user_email and is_caregiver(user_email):
@@ -85,4 +92,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
